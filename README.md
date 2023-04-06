@@ -21,7 +21,7 @@ This application should be capable of:
     
     we choose `libopus` in this project.
 
-* Opus supports only 8000, 12000, 16000, 24000, and 48000 Hz sample rates. If the input audio is not in this list, it needs to be converted first.
+* Opus supports only 8000, 12000, 16000, 24000, and 48000 Hz sample rates. It will be resampled if the sample rate of the input audio is not in this list.
 
 
 ## Setup
@@ -68,7 +68,10 @@ This application should be capable of:
     # Stream #0:0: Audio: pcm_alaw
    
     ffprobe ./inputs/sample2.aac
-    # Stream #0:0: Audio: aac (LC)
+    # Stream #0:0: Audio: aac (LC), 48000 Hz
+   
+    ffprobe ./inputs/sample3.aac
+    # Stream #0:0: Audio: aac (LC), 44100 Hz
     ```
 
 5. Now your folder structure should be like
@@ -88,6 +91,7 @@ This application should be capable of:
         - inputs
             - sample1.alaw
             - sample2.aac
+            - sample3.aac
         - outputs
     ```
 
@@ -108,6 +112,7 @@ This application should be capable of:
     ```bash
     ./ffmpeg-transcoding-example ../inputs/sample1.alaw ../outputs/sample1.mp4
     ./ffmpeg-transcoding-example ../inputs/sample2.aac ../outputs/sample2.mp4
+    ./ffmpeg-transcoding-example ../inputs/sample3.aac ../outputs/sample3.mp4
     ```
 
 3. Validate
@@ -117,5 +122,8 @@ This application should be capable of:
     # Stream #0:0(und): Audio: opus
    
     ffprobe ../outputs/sample2.mp4
+    # Stream #0:0(und): Audio: opus
+   
+    ffprobe ../outputs/sample3.mp4
     # Stream #0:0(und): Audio: opus
     ```

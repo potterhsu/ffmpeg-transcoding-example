@@ -4,17 +4,31 @@
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 #include <libavutil/audio_fifo.h>
-#include <libavutil/avassert.h>
 #include <libavutil/avstring.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/frame.h>
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 
-/* The output bit rate in bit/s */
 #define OUTPUT_BIT_RATE 96000
-/* The number of output channels */
 #define OUTPUT_CHANNELS 2
+#define OPUS_AVAILABLE_SAMPLE_RATE {8000, 12000, 16000, 24000, 48000}
+
+static int find_nearest_number(int num, int bins[], size_t size) {
+    int nearest_num = INT_MAX;
+    int min_diff = INT_MAX;
+    size_t i;
+
+    for (i = 0; i < size; i++) {
+        int diff = abs(num - bins[i]);
+        if (diff < min_diff) {
+            min_diff = diff;
+            nearest_num = bins[i];
+        }
+    }
+
+    return nearest_num;
+}
 
 static int open_input_file(const char *filename,
                            AVFormatContext **input_format_context,
@@ -167,12 +181,12 @@ static int open_output_file(const char *filename,
     /* Set the basic encoder parameters.
      * The input file's sample rate is used to avoid a sample rate conversion. */
     av_channel_layout_default(&avctx->ch_layout, OUTPUT_CHANNELS);
-    avctx->sample_rate    = input_codec_context->sample_rate;
+    avctx->sample_rate    = find_nearest_number(input_codec_context->sample_rate, (int[])OPUS_AVAILABLE_SAMPLE_RATE, 5);
     avctx->sample_fmt     = output_codec->sample_fmts[0];
     avctx->bit_rate       = OUTPUT_BIT_RATE;
 
     /* Set the sample rate for the container. */
-    stream->time_base.den = input_codec_context->sample_rate;
+    stream->time_base.den = avctx->sample_rate;
     stream->time_base.num = 1;
 
     /* Some container formats (like MP4) require global headers to be present.
@@ -265,12 +279,6 @@ static int init_resampler(AVCodecContext *input_codec_context,
         fprintf(stderr, "Could not allocate resample context\n");
         return error;
     }
-    /*
-    * Perform a sanity check so that the number of converted samples is
-    * not greater than the number of samples to be converted.
-    * If the sample rates differ, this case has to be handled differently
-    */
-    av_assert0(output_codec_context->sample_rate == input_codec_context->sample_rate);
 
     /* Open the resampler with the specified parameters. */
     if ((error = swr_init(*resample_context)) < 0) {
